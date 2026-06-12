@@ -6,8 +6,6 @@ Everything below stays inside the AWS Free Tier:
 - **GitHub Actions**: 2,000 free minutes/month on public/private repos
 - **Gemini API**: free tier via Google AI Studio (no card required)
 
-Total expected cost: **$0**.
-
 ---
 
 ## Step 0 — Prerequisites (10 min)
