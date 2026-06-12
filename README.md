@@ -24,13 +24,84 @@ compliance verdict in ~2–4 seconds.
 ## Architecture
 
 ```
-Browser (React + Vite SPA, static hosting on S3)
-   │  label image (base64)
-   ▼
-Google Gemini 2.0 Flash  ──►  structured JSON extraction (exact transcription)
-   │
-   ▼
-Client-side compliance engine ──► PASS / REVIEW / FAIL per field + overall verdict
+┌───────────────────────────────────────────────────────────┐
+│                    End User Browser                       │
+│                 (React + Vite Single Page App)            │
+└───────────────────────┬───────────────────────────────────┘
+                        │
+                        │ Upload Label Image
+                        │ (Base64 Encoded)
+                        ▼
+┌───────────────────────────────────────────────────────────┐
+│               Static Web Hosting (AWS S3)                │
+│                                                           │
+│  • React/Vite Frontend                                   │
+│  • Client-side Processing                                │
+│  • Compliance Validation Logic                           │
+└───────────────────────┬───────────────────────────────────┘
+                        │
+                        │ HTTPS Request
+                        │ Image (Base64)
+                        ▼
+┌───────────────────────────────────────────────────────────┐
+│                  Google Gemini 2.0 Flash                 │
+│                                                           │
+│  Vision + OCR Extraction                                 │
+│  • Reads label image                                     │
+│  • Performs exact transcription                          │
+│  • Returns structured JSON output                        │
+└───────────────────────┬───────────────────────────────────┘
+                        │
+                        │ Structured JSON
+                        ▼
+┌───────────────────────────────────────────────────────────┐
+│            Client-Side Compliance Engine                 │
+│                                                           │
+│  Rule Evaluation                                          │
+│  • Required Fields Check                                 │
+│  • Format Validation                                     │
+│  • Compliance Rules                                      │
+│  • Business Logic Validation                             │
+└───────────────────────┬───────────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────────┐
+│                     Compliance Result                    │
+│                                                           │
+│  Field-Level Status                                      │
+│  • PASS                                                  │
+│  • REVIEW                                                │
+│  • FAIL                                                  │
+│                                                           │
+│  Overall Verdict                                         │
+│  • Approved                                              │
+│  • Needs Review                                          │
+│  • Rejected                                              │
+└───────────────────────────────────────────────────────────┘
+```
+```
+**Architecture Flow**
+
+User
+ │
+ ▼
+React + Vite SPA (S3 Hosted)
+ │
+ │ Base64 Image
+ ▼
+Google Gemini 2.0 Flash
+ │
+ │ Structured JSON
+ ▼
+Compliance Engine
+ │
+ ├─ Required Field Validation
+ ├─ Regulatory Rules
+ ├─ Business Rules
+ └─ Quality Checks
+ │
+ ▼
+PASS / REVIEW / FAIL
 ```
 
 - **No backend.** The compliance rules run in the browser; the only network
@@ -108,11 +179,122 @@ DEPLOYMENT.md                # full AWS Free Tier launch guide
 
 ## Testing the checks
 
-Generate test labels with any AI image tool (the brief suggests this). Useful cases:
+## Test Plan with Dummy Data
 
-- A clean label matching the sample application → all PASS
-- Brand in different capitalization → brand row shows NEEDS REVIEW
-- Warning with "Government Warning:" in title case → warning row FAIL
-- Warning with a word changed/omitted → FAIL with explanation
-- Label missing net contents → FAIL (not found)
-- Photo at an angle/with glare → result includes an image-quality banner
+Eight ready-made dummy labels are in the `test-labels/` folder, each designed
+to trigger a specific verification path. All of them (except the import label)
+are tested against the same dummy application data below.
+
+---
+
+## Dummy application data
+
+Use the app's **Fill sample** button, or enter manually:
+
+| Field | Value |
+|---|---|
+| Brand name | `OLD TOM DISTILLERY` |
+| Class / type designation | `Kentucky Straight Bourbon Whiskey` |
+| Alcohol content (% ABV) | `45` |
+| Net contents | `750 mL` |
+| Bottler / producer | `Old Tom Distillery Co., Bardstown, KY` |
+| Imported product | unchecked |
+
+For the import test (label 07) only:
+
+| Field | Value |
+|---|---|
+| Brand name | `CHATEAU VIEUX MOULIN` |
+| Class / type designation | `Brandy` |
+| Alcohol content (% ABV) | `40` |
+| Net contents | `700 mL` |
+| Bottler / producer | `Maison Vieux Moulin, Cognac` |
+| Imported product | **checked** · Country of origin: `France` |
+
+---
+
+## Test cases
+
+### TC-1 · Happy path
+1. Open the app → click **Fill sample**
+2. Upload `label-01-perfect.png`
+3. **Expected:** overall **✓ PASS**, all seven requirement rows green,
+   processing time badge under 5.0s
+4. Metrics panel: Labels processed +1, Pass +1
+
+### TC-2 · Brand capitalization (the "Stone's Throw" rule)
+1. Same application data
+2. Upload `label-02-brand-case.png` (label prints *Old Tom Distillery* in title case)
+3. **Expected:** overall **◐ NEEDS REVIEW** — brand row flagged for review with
+   both values shown side by side; nothing auto-fails. This demonstrates the
+   judgment tier requested by senior agents.
+
+### TC-3 · Warning prefix not in capitals
+1. Upload `label-03-warning-titlecase.png` (prints *Government Warning:* in title case)
+2. **Expected:** overall **✕ FAIL** — Government warning row fails with the
+   reason "prefix is not in all capital letters." This is the exact violation
+   described in the discovery interviews (title-case prefix → rejection).
+
+### TC-4 · ABV mismatch
+1. Upload `label-04-wrong-abv.png` (label says 40% / 80 proof; application says 45)
+2. **Expected:** overall **FAIL** — Alcohol content row shows
+   "application: 45%, label: 40%." Also verifies proof→ABV parsing.
+
+### TC-5 · Missing warning statement
+1. Upload `label-05-missing-warning.png`
+2. **Expected:** overall **FAIL** — Government warning row: "not found on label."
+
+### TC-6 · Reworded warning
+1. Upload `label-06-reworded-warning.png` ("should not drink" changed to "must not drink")
+2. **Expected:** overall **FAIL** — warning row: text "deviates from the
+   mandatory word-for-word statement." Proves the check is verbatim, not fuzzy.
+
+### TC-7 · Import / country of origin
+1. **Clear** the form and enter the Chateau Vieux Moulin data above,
+   check **Imported product**, country `France`
+2. Upload `label-07-import-france.png`
+3. **Expected:** PASS, with Country of origin row matching "PRODUCT OF FRANCE"
+4. Negative variant: uncheck nothing but upload `label-01-perfect.png`
+   (no origin statement) against this import application →
+   Country of origin row **FAIL**: "country of origin statement missing."
+
+### TC-8 · Poor-quality photo
+1. Restore the sample application data
+2. Upload `label-08-bad-photo.png` (rotated, dark)
+3. **Expected:** the result includes a yellow **Image quality** banner
+   describing the problem (angle/low light). Fields the model can still read
+   are verified normally; unreadable ones fail as "not found" rather than crashing.
+
+### TC-9 · Batch upload (Janet's request)
+1. Select **all eight images at once** in the file picker (or drag them together)
+2. **Expected:** all eight appear instantly as queued cards; two process at a
+   time (free-tier rate-limit throttling); each card resolves independently
+   with its own verdict and timing; the queue pill in the header counts down.
+
+### TC-10 · Metrics dashboard
+1. After TC-1 through TC-9, check the Session metrics panel
+2. **Expected:** Labels processed = total uploads, pass/review/fail split
+   matches the verdicts above, average time populated, and "Most flagged
+   requirements" lists Government warning at or near the top
+3. Click **Reset** → all counters return to zero
+
+### TC-11 · Error handling
+1. Temporarily disconnect from the internet (or rename the key in `.env`
+   locally) and upload any label
+2. **Expected:** the card shows a readable error message and a retry hint —
+   no blank screen, no console-only failure; Metrics "errors" count increments.
+
+---
+
+## Regenerating or extending the dummy labels
+
+`generate_test_labels.py` (included) produces all eight images with Pillow:
+
+```bash
+pip install pillow
+python3 generate_test_labels.py
+```
+
+Edit the parameters at the bottom of the script to create new cases — e.g.
+change `net="750 mL"` to `net="1 L"` for a net-contents mismatch test
+
