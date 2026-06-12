@@ -1,0 +1,198 @@
+/* TTB Label Verify — design notes
+   Audience: federal compliance agents, half over 50, mixed tech comfort.
+   Direction: federal-utilitarian. Ink navy + paper white, one regulatory red
+   reserved exclusively for FAIL. Big type, big targets, zero decoration that
+   doesn't carry information. The verdict badge IS the interface.            */
+
+:root {
+  --ink: #15243b;        /* federal navy — text & chrome */
+  --paper: #f7f8fa;      /* page background */
+  --card: #ffffff;
+  --line: #ccd3de;
+  --pass: #1d7a3e;
+  --review: #946300;
+  --fail: #b1261b;       /* the only red on the page */
+  --accent: #1a4e8a;     /* interactive blue */
+  --radius: 6px;
+  font-size: 17px;       /* deliberately large base size */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Public Sans", system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+code { font-family: "IBM Plex Mono", monospace; font-size: 0.9em; }
+
+/* ---------- masthead ---------- */
+.masthead {
+  background: var(--ink);
+  color: #fff;
+  border-bottom: 4px solid var(--accent);
+}
+.masthead-inner {
+  max-width: 1200px; margin: 0 auto; padding: 18px 24px;
+  display: flex; align-items: center; gap: 16px;
+}
+.seal {
+  width: 52px; height: 52px; border: 2px solid #fff; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: "IBM Plex Mono", monospace; font-weight: 600; letter-spacing: 1px;
+}
+.masthead h1 { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: 0.02em; }
+.masthead p { margin: 2px 0 0; opacity: 0.85; font-size: 0.9rem; }
+.queue-pill {
+  margin-left: auto; background: var(--accent); padding: 6px 14px;
+  border-radius: 99px; font-weight: 600; font-size: 0.9rem;
+}
+
+/* ---------- layout ---------- */
+.layout {
+  max-width: 1200px; margin: 24px auto; padding: 0 24px;
+  display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;
+}
+.col-left { display: grid; gap: 24px; position: sticky; top: 16px; }
+.col-right { display: grid; gap: 24px; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .col-left { position: static; }
+}
+
+/* ---------- cards & forms ---------- */
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 20px;
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-head-actions { display: flex; gap: 8px; }
+.card h2 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.01em; }
+.hint { color: #56616f; font-size: 0.88rem; margin: 4px 0 14px; }
+
+.field { display: block; margin-bottom: 14px; }
+.field span { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 5px; }
+.field input {
+  width: 100%; padding: 11px 12px; font-size: 1rem;
+  border: 1.5px solid var(--line); border-radius: var(--radius);
+  font-family: inherit;
+}
+.field input:focus { outline: 3px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.field-check { display: flex; gap: 10px; align-items: center; margin: 16px 0; font-size: 0.92rem; }
+.field-check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+.btn-ghost {
+  background: none; border: 1.5px solid var(--line); border-radius: var(--radius);
+  padding: 7px 14px; font: inherit; font-size: 0.85rem; font-weight: 600;
+  color: var(--accent); cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--accent); background: #eef3fa; }
+.btn-ghost:focus-visible { outline: 3px solid var(--accent); }
+
+/* ---------- dropzone ---------- */
+.dropzone {
+  border: 2px dashed var(--accent); border-radius: var(--radius);
+  padding: 36px 20px; text-align: center; cursor: pointer;
+  display: grid; gap: 6px; background: #fbfcfe; color: var(--ink);
+}
+.dropzone:hover, .dropzone-active { background: #eef3fa; }
+.dropzone:focus-visible { outline: 3px solid var(--accent); }
+.dropzone-icon { font-size: 1.8rem; color: var(--accent); }
+.dropzone span { font-size: 0.85rem; color: #56616f; }
+.dropzone-busy { opacity: 0.6; cursor: wait; }
+
+/* ---------- results ---------- */
+.result-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-left: 6px solid var(--line); border-radius: var(--radius); padding: 18px;
+}
+.verdict-pass   { border-left-color: var(--pass); }
+.verdict-review { border-left-color: var(--review); }
+.verdict-fail   { border-left-color: var(--fail); }
+.result-error   { border-left-color: var(--fail); }
+
+.result-top { display: flex; gap: 14px; align-items: center; }
+.result-thumb {
+  width: 72px; height: 72px; object-fit: cover;
+  border-radius: var(--radius); border: 1px solid var(--line); flex-shrink: 0;
+}
+.result-headline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.result-card h3 { margin: 0; font-size: 1rem; word-break: break-all; }
+
+.badge {
+  display: inline-block; padding: 4px 12px; border-radius: 99px;
+  font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; white-space: nowrap;
+}
+.badge-pass   { background: #e3f3e8; color: var(--pass); }
+.badge-review { background: #fdf2dc; color: var(--review); }
+.badge-fail   { background: #fbe5e3; color: var(--fail); }
+.badge-skip   { background: #eef0f3; color: #56616f; }
+
+.timing { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; color: #56616f; }
+.timing-slow { color: var(--fail); font-weight: 600; }
+
+.quality-note {
+  margin: 12px 0 0; padding: 9px 12px; background: #fdf2dc;
+  border-radius: var(--radius); font-size: 0.85rem;
+}
+
+.checks-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 0.88rem; }
+.checks-table th {
+  text-align: left; padding: 7px 10px; border-bottom: 2px solid var(--ink);
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.checks-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.checks-table tr:last-child td { border-bottom: none; }
+.detail-cell { color: #3c4655; }
+.row-fail .detail-cell { color: var(--fail); font-weight: 600; }
+
+.error-text { color: var(--fail); font-weight: 600; margin: 4px 0; font-size: 0.9rem; }
+
+.spinner {
+  width: 22px; height: 22px; margin-left: auto; flex-shrink: 0;
+  border: 3px solid var(--line); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+
+.empty-state {
+  border: 1px dashed var(--line); border-radius: var(--radius);
+  padding: 40px 24px; text-align: center; color: #56616f;
+}
+
+/* ---------- metrics ---------- */
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat {
+  background: var(--paper); border-radius: var(--radius); padding: 12px;
+  display: grid; gap: 2px; text-align: center;
+}
+.stat strong { font-size: 1.4rem; font-family: "IBM Plex Mono", monospace; }
+.stat span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #56616f; }
+.stat-pass strong { color: var(--pass); }
+.stat-review strong { color: var(--review); }
+.stat-fail strong { color: var(--fail); }
+
+.metrics-failures h3 { font-size: 0.85rem; margin: 16px 0 8px; }
+.metrics-failures ul { list-style: none; margin: 0; padding: 0; }
+.metrics-failures li {
+  display: flex; justify-content: space-between; padding: 6px 0;
+  border-bottom: 1px solid var(--line); font-size: 0.88rem;
+}
+
+/* ---------- misc ---------- */
+.banner-warn {
+  max-width: 1200px; margin: 16px auto 0; padding: 12px 16px;
+  background: #fdf2dc; border: 1px solid var(--review);
+  border-radius: var(--radius); font-size: 0.92rem;
+  margin-left: 24px; margin-right: 24px;
+}
+@media (min-width: 1248px) { .banner-warn { margin-left: auto; margin-right: auto; } }
+
+.footer {
+  max-width: 1200px; margin: 32px auto; padding: 0 24px;
+  color: #56616f; font-size: 0.82rem;
+}
